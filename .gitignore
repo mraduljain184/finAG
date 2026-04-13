@@ -9,4 +9,4 @@ frontend/dist/
 *.log
 .DS_Store
 .idea/
-.vscode/
+.vscode/.vscode/
