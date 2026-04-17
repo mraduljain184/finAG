@@ -32,6 +32,8 @@ from tools.news_tool import fetch_news
 
 from agents.financial_agent import run_financial_agent
 from agents.news_agent import run_news_agent
+from agents.technical_agent import run_technical_agent
+from agents.competitor_agent import run_competitor_agent
 
 # ── Logging Setup ──
 logger.remove()
@@ -245,6 +247,40 @@ async def agent_news(request: AnalyzeRequest):
         logger.error(f"News agent failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/agent/technical")
+async def agent_technical(request: AnalyzeRequest):
+    """
+    Run the technical analysis agent with LLM interpretation.
+    Returns raw indicators + intelligent interpretation.
+    """
+    try:
+        result = run_technical_agent(request.ticker)
+        return {
+            "ticker": request.ticker.upper(),
+            "data": result["data"].model_dump(),
+            "analysis": result["analysis"],
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Technical agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agent/competitor")
+async def agent_competitor(request: AnalyzeRequest):
+    """
+    Run the competitor analysis agent.
+    Identifies competitors, fetches their data, and writes comparative analysis.
+    """
+    try:
+        result = run_competitor_agent(request.ticker)
+        return result.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Competitor agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ── Run ──
 if __name__ == "__main__":
