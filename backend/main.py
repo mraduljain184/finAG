@@ -37,6 +37,9 @@ from agents.competitor_agent import run_competitor_agent
 
 from crew.research_crew import run_research_crew
 
+from fastapi.responses import FileResponse
+from tools.pdf_tool import generate_pdf_report
+
 # ── Logging Setup ──
 logger.remove()
 logger.add(
@@ -250,6 +253,31 @@ async def agent_competitor(request: AnalyzeRequest):
     except Exception as e:
         logger.error(f"Competitor agent failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.post("/analyze/pdf")
+async def analyze_pdf(request: AnalyzeRequest):
+    """
+    Run full analysis and return a downloadable PDF report.
+    This is the main user-facing endpoint.
+    """
+    try:
+        # Run the full research crew
+        research_data = run_research_crew(request.ticker)
+
+        # Generate PDF
+        pdf_path = generate_pdf_report(research_data)
+
+        # Return PDF as download
+        return FileResponse(
+            path=pdf_path,
+            media_type="application/pdf",
+            filename=f"{request.ticker.upper()}_equity_research.pdf",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"PDF generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate report: {str(e)}")
 
 # ── Run ──
 if __name__ == "__main__":
