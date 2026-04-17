@@ -35,6 +35,8 @@ from agents.news_agent import run_news_agent
 from agents.technical_agent import run_technical_agent
 from agents.competitor_agent import run_competitor_agent
 
+from crew.research_crew import run_research_crew
+
 # ── Logging Setup ──
 logger.remove()
 logger.add(
@@ -162,53 +164,20 @@ async def get_news(ticker: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@app.post("/analyze", response_model=AnalyzeResponse)
+@app.post("/analyze")
 async def analyze_full(request: AnalyzeRequest):
     """
-    Full analysis endpoint (stub for now).
-    In Day 7-8, this will trigger the complete CrewAI multi-agent pipeline.
-    For now, it runs financial + technical analysis as a preview.
+    Full multi-agent equity research analysis.
+    Runs all 5 agents (financial, news, technical, competitor, report synthesis).
+    Returns complete research output with final Buy/Hold/Sell recommendation.
     """
-    start = time.time()
-    ticker = request.ticker.upper()
-
     try:
-        # Step 1: Financial data
-        logger.info(f"[{ticker}] Starting analysis...")
-        financial = fetch_financial_data(ticker)
-
-        # Step 2: Technical analysis
-        logger.info(f"[{ticker}] Running technical analysis...")
-        technical = compute_technical_analysis(ticker)
-
-        # Step 3: News
-        logger.info(f"[{ticker}] Fetching news...")
-        articles = fetch_news(financial.company_name, ticker, max_results=10)
-
-        elapsed = time.time() - start
-        logger.success(f"[{ticker}] Analysis complete in {elapsed:.1f}s")
-
-        # Build a basic summary (will be replaced by CrewAI report agent)
-        summary = ReportSummary(
-            executive_summary=f"Preliminary analysis of {financial.company_name} ({ticker}). "
-                              f"Current price: {financial.currency} {financial.current_price}. "
-                              f"Trend: {technical.trend.value}. "
-                              f"Found {len(articles)} recent news articles.",
-            technical_verdict=technical.analysis_summary,
-            sentiment_verdict=f"Collected {len(articles)} news articles for sentiment analysis.",
-        )
-
-        return AnalyzeResponse(
-            ticker=ticker,
-            company_name=financial.company_name,
-            status="completed",
-            summary=summary,
-        )
-
+        result = run_research_crew(request.ticker)
+        return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"[{ticker}] Analysis failed: {e}")
+        logger.error(f"Research crew failed: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
     
 @app.post("/agent/financial")
