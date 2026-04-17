@@ -2,6 +2,7 @@
 finAG — Configuration
 Loads environment variables and exposes typed settings.
 """
+
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -9,10 +10,13 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(ROOT_DIR / ".env")
 
+
 class Settings:
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    LLM_MODEL: str = os.getenv("LLM_MODEL", "claude-sonnet-4-20250514")
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
 
     NEWS_API_KEY: str = os.getenv("NEWS_API_KEY", "")
 
@@ -28,6 +32,11 @@ class Settings:
             return "anthropic"
         elif self.OPENAI_API_KEY:
             return "openai"
+        elif self.GEMINI_API_KEY:
+            return "gemini"
+        elif self.GROQ_API_KEY:
+            return "groq"
         return "none"
+
 
 settings = Settings()

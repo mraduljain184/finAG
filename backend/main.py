@@ -30,6 +30,8 @@ from tools.yfinance_tool import (
 from tools.technical_tool import compute_technical_analysis
 from tools.news_tool import fetch_news
 
+from agents.financial_agent import run_financial_agent
+from agents.news_agent import run_news_agent
 
 # ── Logging Setup ──
 logger.remove()
@@ -206,6 +208,42 @@ async def analyze_full(request: AnalyzeRequest):
     except Exception as e:
         logger.error(f"[{ticker}] Analysis failed: {e}")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+    
+@app.post("/agent/financial")
+async def agent_financial(request: AnalyzeRequest):
+    """
+    Run the financial data agent with LLM analysis.
+    Returns raw data + Claude's intelligent interpretation.
+    """
+    try:
+        result = run_financial_agent(request.ticker)
+        return {
+            "ticker": request.ticker.upper(),
+            "company_name": result["data"].company_name,
+            "data": result["data"].model_dump(),
+            "analysis": result["analysis"],
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Financial agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/agent/news")
+async def agent_news(request: AnalyzeRequest):
+    """
+    Run the news sentiment agent.
+    Returns scored articles + overall sentiment analysis.
+    """
+    try:
+        result = run_news_agent(request.ticker)
+        return result.model_dump()
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"News agent failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Run ──

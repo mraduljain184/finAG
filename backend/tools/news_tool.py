@@ -9,6 +9,7 @@ import requests
 from datetime import datetime, timedelta
 from loguru import logger
 from config import settings
+from urllib.parse import quote_plus
 
 
 def fetch_news_google(query: str, max_results: int = 10) -> list[dict]:
@@ -18,7 +19,8 @@ def fetch_news_google(query: str, max_results: int = 10) -> list[dict]:
     logger.info(f"Fetching Google News for: {query}")
 
     # Google News RSS URL
-    url = f"https://news.google.com/rss/search?q={query}+stock&hl=en&gl=US&ceid=US:en"
+    encoded_query = quote_plus(f"{query} stock")
+    url = f"https://news.google.com/rss/search?q={encoded_query}&hl=en&gl=US&ceid=US:en"
 
     try:
             feed = feedparser.parse(url)
