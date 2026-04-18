@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Search, TrendingUp, Loader2, Download, AlertCircle } from 'lucide-react'
 import { analyzeStock, downloadPDF } from './api/client'
 import ReportView from './components/ReportView'
+import AgentProgress from './components/AgentProgress'
 
 function App() {
   const [ticker, setTicker] = useState('')
@@ -100,16 +101,7 @@ function App() {
               </div>
             </div>
 
-            {loading && (
-              <div className="mt-12 p-6 bg-white rounded-lg border border-slate-200 max-w-lg mx-auto">
-                <Loader2 className="animate-spin mx-auto mb-3 text-primary-500" size={32} />
-                <p className="text-slate-700 font-medium">Running multi-agent analysis...</p>
-                <p className="text-sm text-slate-500 mt-2">
-                  Financial data → News sentiment → Technical analysis → Competitors → Report synthesis
-                </p>
-                <p className="text-xs text-slate-400 mt-2">This takes 15-60 seconds</p>
-              </div>
-            )}
+            {loading && <AgentProgress />}
 
             {error && (
               <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg max-w-lg mx-auto flex items-start gap-3">
