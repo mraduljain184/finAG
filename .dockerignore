@@ -1,0 +1,14 @@
+frontend/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+.vscode/
+.DS_Store
+reports/
+*.pdf
+README.md
+node_modules/

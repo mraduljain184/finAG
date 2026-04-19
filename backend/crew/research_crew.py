@@ -13,8 +13,10 @@ from agents.technical_agent import run_technical_agent
 from agents.competitor_agent import run_competitor_agent
 from agents.report_agent import run_report_agent
 
+from tools.cache_tool import get_cached_report, set_cached_report
 
-def run_research_crew(ticker: str) -> dict:
+
+def run_research_crew(ticker: str, use_cache: bool = True) -> dict:
     """
     Run the full multi-agent research pipeline.
 
@@ -32,6 +34,14 @@ def run_research_crew(ticker: str) -> dict:
         Complete research output with raw data, all specialist analyses, and final report
     """
     ticker = ticker.upper()
+
+    # Check cache first
+    if use_cache:
+        cached = get_cached_report(ticker)
+        if cached:
+            logger.success(f"[Crew] Returning cached result for {ticker}")
+            return cached
+
     logger.info(f"═══════════════════════════════════════════════════")
     logger.info(f"  FIN RESEARCH CREW — Starting analysis for {ticker}")
     logger.info(f"═══════════════════════════════════════════════════")
@@ -84,7 +94,7 @@ def run_research_crew(ticker: str) -> dict:
     logger.success(f"  Total time: {total_time:.1f}s")
     logger.success(f"═══════════════════════════════════════════════════")
 
-    return {
+    result = {
         "ticker": ticker,
         "company_name": financial_result["data"].company_name,
         "generated_at": time.time(),
@@ -105,3 +115,8 @@ def run_research_crew(ticker: str) -> dict:
         },
         "competitor": competitor_result.model_dump(),
     }
+
+    # Cache the result for future requests
+    set_cached_report(ticker, result)
+
+    return result

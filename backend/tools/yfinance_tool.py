@@ -39,9 +39,14 @@ def fetch_financial_data(ticker: str) -> FinancialData:
             if not hasattr(fast, "last_price") or fast.last_price is None:
                 raise ValueError(f"No data found for ticker: {ticker}")
 
+    except ValueError:
+        raise
     except Exception as e:
         logger.error(f"Failed to fetch data for {ticker}: {e}")
-        raise ValueError(f"Could not fetch data for ticker '{ticker}'. Verify it's a valid symbol.") from e
+        raise ValueError(
+            f"Ticker '{ticker.upper()}' not found or has no data available. "
+            f"Try a valid symbol like AAPL, MSFT, GOOGL, TSLA, NVDA, or RELIANCE.NS for Indian stocks."
+        ) from e
     
     data = FinancialData(
         ticker=ticker.upper(),

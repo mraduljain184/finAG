@@ -9,7 +9,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
@@ -40,6 +40,33 @@ from crew.research_crew import run_research_crew
 from fastapi.responses import FileResponse
 from tools.pdf_tool import generate_pdf_report
 
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+from tools.cache_tool import cache_stats, clear_cache
+
+import re
+
+VALID_TICKER_PATTERN = re.compile(r'^[A-Z0-9.\-^]{1,10}$', re.IGNORECASE)
+
+def validate_ticker(ticker: str) -> str:
+    """Validate and normalize a ticker symbol."""
+    if not ticker or not ticker.strip():
+        raise HTTPException(status_code=400, detail="Ticker cannot be empty")
+
+    ticker = ticker.strip().upper()
+
+    if not VALID_TICKER_PATTERN.match(ticker):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ticker format. Tickers contain only letters, numbers, periods, and hyphens (e.g., AAPL, BRK.B, RELIANCE.NS). Got: '{ticker}'"
+        )
+
+    return ticker
+
+
+
 # ── Logging Setup ──
 logger.remove()
 logger.add(
@@ -69,6 +96,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # CORS (allow frontend)
 app.add_middleware(
     CORSMiddleware,
@@ -80,6 +112,18 @@ app.add_middleware(
 
 
 # ── Endpoints ──
+
+@app.get("/admin/cache/stats")
+async def get_cache_stats():
+    """View cache statistics."""
+    return cache_stats()
+
+
+@app.post("/admin/cache/clear")
+async def clear_cache_endpoint():
+    """Clear all cached reports."""
+    count = clear_cache()
+    return {"cleared": count}
 
 @app.get("/")
 async def root():
@@ -168,14 +212,14 @@ async def get_news(ticker: str):
 
 
 @app.post("/analyze")
-async def analyze_full(request: AnalyzeRequest):
+@limiter.limit("10/hour")
+async def analyze_full(request: Request, analyze_request: AnalyzeRequest):
     """
     Full multi-agent equity research analysis.
-    Runs all 5 agents (financial, news, technical, competitor, report synthesis).
-    Returns complete research output with final Buy/Hold/Sell recommendation.
     """
+    ticker = validate_ticker(analyze_request.ticker)
     try:
-        result = run_research_crew(request.ticker)
+        result = run_research_crew(ticker)
         return result
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -255,23 +299,19 @@ async def agent_competitor(request: AnalyzeRequest):
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/analyze/pdf")
-async def analyze_pdf(request: AnalyzeRequest):
+@limiter.limit("10/hour")
+async def analyze_pdf(request: Request, analyze_request: AnalyzeRequest):
     """
     Run full analysis and return a downloadable PDF report.
-    This is the main user-facing endpoint.
     """
     try:
-        # Run the full research crew
-        research_data = run_research_crew(request.ticker)
-
-        # Generate PDF
+        ticker = validate_ticker(analyze_request.ticker)
+        research_data = run_research_crew(ticker)
         pdf_path = generate_pdf_report(research_data)
-
-        # Return PDF as download
         return FileResponse(
             path=pdf_path,
             media_type="application/pdf",
-            filename=f"{request.ticker.upper()}_equity_research.pdf",
+            filename=f"{ticker}_equity_research.pdf",
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
