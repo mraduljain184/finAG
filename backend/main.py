@@ -48,7 +48,7 @@ from tools.cache_tool import cache_stats, clear_cache
 
 import re
 
-VALID_TICKER_PATTERN = re.compile(r'^[A-Z0-9.\-^]{1,10}$', re.IGNORECASE)
+VALID_TICKER_PATTERN = re.compile(r"^[A-Z0-9.\-^]{1,15}$", re.IGNORECASE)
 
 def validate_ticker(ticker: str) -> str:
     """Validate and normalize a ticker symbol."""

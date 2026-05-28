@@ -26,7 +26,7 @@ class TrendDirection(str, Enum):
     SIDEWAYS = "Sideways"
 
 class AnalyzeRequest(BaseModel):
-    ticker: str = Field(..., min_length=1, max_length=10, examples=["AAPL", "RELIANCE.NS"])
+    ticker: str = Field(..., min_length=1, max_length=15, examples=["AAPL", "RELIANCE.NS"])
 
 class AnalyzeResponse(BaseModel):
     ticker: str
